@@ -55,6 +55,34 @@ This starts:
 
 - Backend on `http://localhost:4000`
 - Frontend on `http://localhost:5173`
+- In production, the Express server can also serve the built frontend from the same URL
+
+## Deploy
+
+Recommended beginner path: Render as a single web service.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Ayy-Ali/regex-engine)
+
+This repo includes a root-level `render.yaml` blueprint that tells Render to:
+
+- install dependencies with `npm install`
+- build the frontend with `npm run build`
+- start the combined Express server with `npm start`
+- use `/api/health` for health checks
+
+After you click the button:
+
+1. Sign in to Render.
+2. Approve access to your GitHub repo if prompted.
+3. Confirm the `regex-engine` web service.
+4. Keep the free plan selected unless you want a paid instance.
+5. Click `Apply`.
+
+When the deploy finishes, Render gives you a public `onrender.com` URL.
+
+Important note:
+- Render's official docs say free web services are available, but they spin down after 15 minutes of idle time and can take about a minute to wake back up. Source: [Render free deploy docs](https://render.com/docs/free)
+- Render deploys linked Git branches automatically after pushes. Source: [Render deploys docs](https://render.com/docs/deploys/)
 
 ## Build
 
