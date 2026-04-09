@@ -19,7 +19,7 @@ An interactive full-stack web app for building, testing, explaining, visualizing
 - Frontend: React, Vite, Tailwind CSS
 - Backend: Node.js, Express
 - Regex engine:
-  - Native JavaScript regex for live testing
+  - Custom syntax translated into native JavaScript regex for live testing
   - Custom AST + NFA/DFA pipeline for explanation, generation, visualization, and equivalence
 
 ## Project Structure
@@ -87,7 +87,7 @@ The backend test runner performs focused sanity checks for:
 
 ### Live tester
 
-- Pattern: `a(b|c)*`
+- Pattern: `a(b+c)*`
 - Flags: `g`
 - Test string: `abcb cab`
 
@@ -98,14 +98,14 @@ The backend test runner performs focused sanity checks for:
 
 ### Equivalent regexes
 
-- Regex A: `a(b|c)`
-- Regex B: `ab|ac`
+- Regex A: `a(b+c)`
+- Regex B: `ab+ac`
 - Result: equivalent
 
 ### Non-equivalent regexes
 
 - Regex A: `ab*`
-- Regex B: `ab+`
+- Regex B: `ab{1,}`
 - Result: not equivalent
 - Counterexample: `a`
 
@@ -122,10 +122,10 @@ These features are supported by the custom automata engine:
 
 - literals
 - grouping and non-capturing groups
-- alternation
+- alternation with `+` as the primary OR operator
 - character classes and ranges
 - `.`
-- quantifiers: `*`, `+`, `?`, `{n}`, `{n,}`, `{n,m}`
+- quantifiers: `*`, `?`, `{n}`, `{n,}`, `{n,m}`
 - `^...$` full-string anchoring
 - `i` and `s` flags
 

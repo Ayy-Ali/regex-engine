@@ -155,7 +155,7 @@ class Parser {
   parseAlternation() {
     const alternatives = [this.parseSequence()];
 
-    while (this.peek() === "|") {
+    while (this.peek() === "|" || this.peek() === "+") {
       this.consume();
       alternatives.push(this.parseSequence());
     }
@@ -173,7 +173,12 @@ class Parser {
   parseSequence() {
     const elements = [];
 
-    while (!this.isAtEnd() && this.peek() !== ")" && this.peek() !== "|") {
+    while (
+      !this.isAtEnd() &&
+      this.peek() !== ")" &&
+      this.peek() !== "|" &&
+      this.peek() !== "+"
+    ) {
       elements.push(this.parseQuantified());
     }
 
@@ -200,12 +205,11 @@ class Parser {
 
     const token = this.peek();
 
-    if (token === "*" || token === "+" || token === "?") {
+    if (token === "*" || token === "?") {
       this.consume();
       const greedy = this.peek() === "?" ? (this.consume(), false) : true;
       const mapping = {
         "*": { min: 0, max: Infinity },
-        "+": { min: 1, max: Infinity },
         "?": { min: 0, max: 1 },
       };
 
@@ -580,6 +584,47 @@ export const parseRegexToAst = (pattern, flags = "") => {
   };
 };
 
+export const translateCustomPatternToNative = (pattern) => {
+  let result = "";
+  let escaped = false;
+  let inCharacterClass = false;
+
+  for (const char of pattern) {
+    if (escaped) {
+      result += char;
+      escaped = false;
+      continue;
+    }
+
+    if (char === "\\") {
+      result += char;
+      escaped = true;
+      continue;
+    }
+
+    if (char === "[" && !inCharacterClass) {
+      inCharacterClass = true;
+      result += char;
+      continue;
+    }
+
+    if (char === "]" && inCharacterClass) {
+      inCharacterClass = false;
+      result += char;
+      continue;
+    }
+
+    if (char === "+" && !inCharacterClass) {
+      result += "|";
+      continue;
+    }
+
+    result += char;
+  }
+
+  return result;
+};
+
 export const serializeAstForVisualization = (root) => {
   let id = 0;
 
@@ -637,7 +682,9 @@ export const serializeAstForVisualization = (root) => {
           id: currentId,
           label:
             node.max === Infinity
-              ? `Repeat ${node.min}+`
+              ? node.min === 0
+                ? "Repeat 0 or more"
+                : `Repeat ${node.min} or more`
               : `Repeat ${node.min}-${node.max}`,
           type: node.type,
           children: [visit(node.expression)],
@@ -660,6 +707,25 @@ export const serializeAstForVisualization = (root) => {
 
 export const explainAst = (root) => {
   const steps = [];
+
+  const quantifierToken = (node) => {
+    if (node.min === 0 && node.max === Infinity) {
+      return "*";
+    }
+    if (node.min === 1 && node.max === Infinity) {
+      return "{1,}";
+    }
+    if (node.min === 0 && node.max === 1) {
+      return "?";
+    }
+    if (node.max === Infinity) {
+      return `{${node.min},}`;
+    }
+    if (node.min === node.max) {
+      return `{${node.min}}`;
+    }
+    return `{${node.min},${node.max}}`;
+  };
 
   const quantifierLabel = (node) => {
     if (node.min === 0 && node.max === Infinity) {
@@ -721,14 +787,14 @@ export const explainAst = (root) => {
         return;
       case "alternation":
         steps.push({
-          label: "|",
+          label: "+",
           detail: "Matches either the left branch or the right branch.",
         });
         node.alternatives.forEach(visit);
         return;
       case "repeat":
         steps.push({
-          label: "quantifier",
+          label: quantifierToken(node),
           detail: `${quantifierLabel(node)}${node.greedy ? "" : " (lazy)."}`,
         });
         visit(node.expression);

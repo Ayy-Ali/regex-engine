@@ -36,7 +36,7 @@ export const REGEX_TEMPLATES = [
     id: "email",
     label: "Email",
     description: "Basic email format with one @ and a domain.",
-    pattern: "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+    pattern: "^[A-Za-z0-9._%+-]{1,}@[A-Za-z0-9.-]{1,}\\.[A-Za-z]{2,}$",
     flags: "",
     sample: "hello@example.com",
   },
@@ -44,7 +44,7 @@ export const REGEX_TEMPLATES = [
     id: "url",
     label: "URL",
     description: "HTTP or HTTPS URL with a simple host and optional path.",
-    pattern: "^https?:\\/\\/[\\w.-]+(?:\\/[\\w./-]*)?$",
+    pattern: "^https?:\\/\\/[\\w.-]{1,}(?:\\/[\\w./-]*)?$",
     flags: "i",
     sample: "https://openai.com/docs",
   },
@@ -60,7 +60,7 @@ export const REGEX_TEMPLATES = [
     id: "slug",
     label: "Slug",
     description: "Lowercase slugs separated by hyphens.",
-    pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+    pattern: "^[a-z0-9]{1,}(?:-[a-z0-9]{1,})*$",
     flags: "",
     sample: "regex-visualizer",
   },
@@ -81,4 +81,3 @@ export const createHttpError = (message, details, statusCode = 400) => {
 };
 
 export const dedupeChars = (chars) => [...new Set(chars)];
-

@@ -1,7 +1,14 @@
 import {
   DEFAULT_ALPHABET,
+  DIGIT_CHARS,
   GENERATOR_FALLBACK_ALPHABET,
+  LETTER_CHARS,
+  LOWER_CHARS,
+  SPACE_CHARS,
+  UPPER_CHARS,
+  WORD_CHARS,
   dedupeChars,
+  escapeVisible,
 } from "./constants.js";
 import { collectPreferredAlphabet } from "./regexParser.js";
 
@@ -232,6 +239,7 @@ export const determinize = (nfa, alphabet = DEFAULT_ALPHABET) => {
     accepting,
     transitions,
     alphabet: [...alphabet],
+    subsets: stateSets.map((stateSet) => Array.from(stateSet).sort((a, b) => a - b)),
   };
 };
 
@@ -440,6 +448,179 @@ const shortestDistanceToAccepting = (dfa) => {
 
   return distance;
 };
+
+const sameCharSet = (chars, expected) =>
+  chars.length === expected.length && expected.every((char) => chars.includes(char));
+
+const sortChars = (chars) =>
+  dedupeChars(chars).sort((left, right) => left.charCodeAt(0) - right.charCodeAt(0));
+
+const formatChar = (char) => {
+  if (char === " ") {
+    return "space";
+  }
+
+  return escapeVisible(char);
+};
+
+const summarizeCharSet = (chars) => {
+  if (chars === null) {
+    return "epsilon";
+  }
+
+  const normalized = sortChars(chars);
+
+  if (normalized.length === 0) {
+    return "empty";
+  }
+
+  if (sameCharSet(normalized, DIGIT_CHARS)) {
+    return "\\d";
+  }
+
+  if (sameCharSet(normalized, SPACE_CHARS)) {
+    return "\\s";
+  }
+
+  if (sameCharSet(normalized, WORD_CHARS)) {
+    return "\\w";
+  }
+
+  if (sameCharSet(normalized, LOWER_CHARS)) {
+    return "[a-z]";
+  }
+
+  if (sameCharSet(normalized, UPPER_CHARS)) {
+    return "[A-Z]";
+  }
+
+  if (sameCharSet(normalized, LETTER_CHARS)) {
+    return "[A-Za-z]";
+  }
+
+  if (normalized.length === DEFAULT_ALPHABET.length) {
+    return "ANY";
+  }
+
+  if (
+    normalized.length === DEFAULT_ALPHABET.length - 1 &&
+    !normalized.includes("\n")
+  ) {
+    return "ANY except \\n";
+  }
+
+  const ranges = [];
+  let start = normalized[0];
+  let previous = normalized[0];
+
+  const flush = () => {
+    const span = previous.charCodeAt(0) - start.charCodeAt(0) + 1;
+    if (span >= 3) {
+      ranges.push(`${formatChar(start)}-${formatChar(previous)}`);
+      return;
+    }
+
+    let currentCode = start.charCodeAt(0);
+    while (currentCode <= previous.charCodeAt(0)) {
+      ranges.push(formatChar(String.fromCharCode(currentCode)));
+      currentCode += 1;
+    }
+  };
+
+  for (let index = 1; index < normalized.length; index += 1) {
+    const current = normalized[index];
+    if (current.charCodeAt(0) === previous.charCodeAt(0) + 1) {
+      previous = current;
+      continue;
+    }
+
+    flush();
+    start = current;
+    previous = current;
+  }
+
+  flush();
+
+  const label = ranges.join(", ");
+  if (label.length <= 34) {
+    return label;
+  }
+
+  return `${ranges.slice(0, 4).join(", ")} ... (${normalized.length} chars)`;
+};
+
+const collectGraphNodes = (states, start, accepting, prefix, subsets) =>
+  Array.from(states)
+    .sort((left, right) => left - right)
+    .map((state) => ({
+      id: `${prefix}-${state}`,
+      state,
+      label: `${prefix.toUpperCase()} ${state}`,
+      isStart: state === start,
+      isAccepting: accepting.has(state),
+      subset: subsets?.[state] || null,
+    }));
+
+const mergeGraphEdges = (edges) => {
+  const grouped = new Map();
+
+  for (const edge of edges) {
+    const key = `${edge.from}->${edge.to}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, { ...edge, labels: [] });
+    }
+
+    grouped.get(key).labels.push(edge.label);
+  }
+
+  return Array.from(grouped.values()).map((edge) => ({
+    from: edge.from,
+    to: edge.to,
+    label: dedupeChars(edge.labels).join(", "),
+  }));
+};
+
+export const serializeNfaForVisualization = (nfa) => ({
+  kind: "nfa",
+  nodes: collectGraphNodes(nfa.states, nfa.start, nfa.accepting, "q"),
+  edges: mergeGraphEdges(
+    nfa.transitions.map((transition) => ({
+      from: `q-${transition.from}`,
+      to: `q-${transition.to}`,
+      label: summarizeCharSet(transition.chars),
+    })),
+  ),
+});
+
+export const serializeDfaForVisualization = (dfa, options = {}) => ({
+  kind: options.kind || "dfa",
+  nodes: collectGraphNodes(
+    dfa.states,
+    dfa.start,
+    dfa.accepting,
+    options.prefix || "d",
+    dfa.subsets,
+  ),
+  edges: mergeGraphEdges(
+    Array.from(dfa.states).flatMap((state) => {
+      const outgoing = dfa.transitions[state] || {};
+      const byTarget = new Map();
+
+      for (const [char, target] of Object.entries(outgoing)) {
+        if (!byTarget.has(target)) {
+          byTarget.set(target, []);
+        }
+        byTarget.get(target).push(char);
+      }
+
+      return Array.from(byTarget.entries()).map(([target, chars]) => ({
+        from: `${options.prefix || "d"}-${state}`,
+        to: `${options.prefix || "d"}-${target}`,
+        label: summarizeCharSet(chars),
+      }));
+    }),
+  ),
+});
 
 export const pickGenerationAlphabet = (ast) => {
   const { chars, needsFallback } = collectPreferredAlphabet(ast);

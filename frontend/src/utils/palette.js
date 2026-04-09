@@ -13,7 +13,7 @@ export const builderSections = [
     title: "Quantifiers",
     items: [
       { label: "*", token: "*", hint: "Repeat 0 or more times." },
-      { label: "+", token: "+", hint: "Repeat 1 or more times." },
+      { label: "{1,}", token: "{1,}", hint: "Repeat 1 or more times." },
       { label: "?", token: "?", hint: "Make the previous token optional." },
       { label: "{n}", token: "{3}", hint: "Repeat exactly n times." },
       { label: "{n,m}", token: "{2,5}", hint: "Repeat between n and m times." },
@@ -34,7 +34,7 @@ export const builderSections = [
     items: [
       { label: "( )", token: "()", hint: "Create a capturing group." },
       { label: "(?: )", token: "(?:)", hint: "Create a non-capturing group." },
-      { label: "|", token: "|", hint: "Alternative choice." },
+      { label: "+", token: "+", hint: "Alternative choice." },
       { label: "^", token: "^", hint: "Start anchor." },
       { label: "$", token: "$", hint: "End anchor." },
     ],
@@ -46,4 +46,3 @@ export const tabOptions = [
   { id: "generate", label: "Generate Strings" },
   { id: "equivalence", label: "Equivalence Checker" },
 ];
-

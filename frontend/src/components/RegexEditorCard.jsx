@@ -29,7 +29,7 @@ export default function RegexEditorCard({
           rows={4}
           spellCheck={false}
           className="input-base resize-none font-mono text-[15px]"
-          placeholder="Try ^[a-z]+\\d?$"
+          placeholder="Try ^[a-z]{1,}\\d?$"
         />
         <FlagSelector value={flags} onToggle={onToggleFlag} />
       </div>
@@ -65,4 +65,3 @@ export default function RegexEditorCard({
     </div>
   );
 }
-

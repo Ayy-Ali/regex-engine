@@ -8,7 +8,7 @@ import {
 
 test("analyzePattern returns explanation and tester matches", () => {
   const result = analyzePattern({
-    pattern: "a(b|c)*",
+    pattern: "a(b+c)*",
     flags: "g",
     testString: "abcb cab",
   });
@@ -16,7 +16,8 @@ test("analyzePattern returns explanation and tester matches", () => {
   assert.equal(result.tester.matched, true);
   assert.equal(result.automata.supported, true);
   assert.ok(result.explanation.steps.length > 0);
-  assert.ok(result.visualization);
+  assert.ok(result.visualization.parseTree);
+  assert.ok(result.visualization.nfa);
 });
 
 test("generateMatchingStrings returns bounded examples", () => {
@@ -33,9 +34,9 @@ test("generateMatchingStrings returns bounded examples", () => {
 
 test("compareRegexes detects equivalent patterns", () => {
   const result = compareRegexes({
-    patternA: "a(b|c)",
+    patternA: "a(b+c)",
     flagsA: "",
-    patternB: "ab|ac",
+    patternB: "ab+ac",
     flagsB: "",
   });
 
@@ -47,7 +48,7 @@ test("compareRegexes returns a counterexample when patterns differ", () => {
   const result = compareRegexes({
     patternA: "ab*",
     flagsA: "",
-    patternB: "ab+",
+    patternB: "ab{1,}",
     flagsB: "",
   });
 

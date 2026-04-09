@@ -34,7 +34,7 @@ const fallbackTemplates = [
     id: "email",
     label: "Email",
     description: "Basic email validation.",
-    pattern: "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$",
+    pattern: "^[A-Za-z0-9._%+-]{1,}@[A-Za-z0-9.-]{1,}\\.[A-Za-z]{2,}$",
     flags: "",
     sample: "hello@example.com",
   },
@@ -42,7 +42,7 @@ const fallbackTemplates = [
     id: "url",
     label: "URL",
     description: "Simple URL matcher.",
-    pattern: "^https?:\\/\\/[\\w.-]+(?:\\/[\\w./-]*)?$",
+    pattern: "^https?:\\/\\/[\\w.-]{1,}(?:\\/[\\w./-]*)?$",
     flags: "i",
     sample: "https://openai.com/docs",
   },
@@ -58,11 +58,11 @@ const fallbackTemplates = [
 
 const buildInitialState = () => {
   const defaults = {
-    pattern: "a(b|c)*",
+    pattern: "a(b+c)*",
     flags: "g",
     testString: "abcb cab",
     activeTab: "test",
-    patternB: "ab|ac",
+    patternB: "ab+ac",
     flagsB: "",
     count: "8",
     maxLength: "6",
@@ -385,6 +385,13 @@ export default function HomePage() {
     matches: [],
     segments: [],
   };
+  const engineNotes = Array.from(
+    new Set([
+      ...(analysis.data?.automata?.notes || []),
+      ...(generator.data?.notes || []),
+      ...(equivalence.data?.notes || []),
+    ]),
+  );
 
   return (
     <main className="mx-auto min-h-screen max-w-[1600px] px-4 py-6 sm:px-6 lg:px-8">
@@ -405,13 +412,13 @@ export default function HomePage() {
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="chip">Live tester</span>
-            <span className="chip">Parse-tree visualizer</span>
+            <span className="chip">NFA & DFA diagrams</span>
             <span className="chip">Counterexamples</span>
           </div>
         </div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1.25fr)_360px]">
+      <div className="grid gap-6 xl:grid-cols-[380px_minmax(0,1fr)]">
         <div className="space-y-6">
           <Panel
             title="Templates"
@@ -457,107 +464,107 @@ export default function HomePage() {
         </div>
 
         <div className="space-y-6">
-          <Panel
-            title="Workspace"
-            subtitle="Switch between testing, string generation, and equivalence checking."
-            actions={<TabNav activeTab={activeTab} onChange={setActiveTab} />}
-          >
-            {analysis.loading ? (
-              <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-muted">
-                Re-analyzing the current regex...
-              </div>
-            ) : null}
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_360px]">
+            <div className="space-y-6">
+              <Panel
+                title="Workspace"
+                subtitle="Switch between testing, string generation, and equivalence checking."
+                actions={<TabNav activeTab={activeTab} onChange={setActiveTab} />}
+              >
+                {analysis.loading ? (
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm text-muted">
+                    Re-analyzing the current regex...
+                  </div>
+                ) : null}
 
-            {analysis.error ? (
-              <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-100">
-                {analysis.error}
-              </div>
-            ) : null}
+                {analysis.error ? (
+                  <div className="rounded-2xl border border-rose-400/20 bg-rose-500/10 p-4 text-sm text-rose-100">
+                    {analysis.error}
+                  </div>
+                ) : null}
 
-            <div className="mt-5 space-y-5">
-              {activeTab === "test" ? (
-                <>
-                  <MatchPreview
-                    testString={testString}
-                    segments={tester.segments}
-                    matched={tester.matched}
-                  />
-                  <MatchResults
-                    tester={tester}
-                    warnings={analysis.data?.warnings || []}
-                  />
-                </>
-              ) : null}
+                <div className="mt-5 space-y-5">
+                  {activeTab === "test" ? (
+                    <>
+                      <MatchPreview
+                        testString={testString}
+                        segments={tester.segments}
+                        matched={tester.matched}
+                      />
+                      <MatchResults
+                        tester={tester}
+                        warnings={analysis.data?.warnings || []}
+                      />
+                    </>
+                  ) : null}
 
-              {activeTab === "generate" ? (
-                <GeneratorPanel
-                  count={count}
-                  maxLength={maxLength}
-                  onCountChange={setCount}
-                  onMaxLengthChange={setMaxLength}
-                  onGenerate={runGeneration}
-                  result={generator.data}
-                  loading={generator.loading}
-                  error={generator.error}
-                />
-              ) : null}
+                  {activeTab === "generate" ? (
+                    <GeneratorPanel
+                      count={count}
+                      maxLength={maxLength}
+                      onCountChange={setCount}
+                      onMaxLengthChange={setMaxLength}
+                      onGenerate={runGeneration}
+                      result={generator.data}
+                      loading={generator.loading}
+                      error={generator.error}
+                    />
+                  ) : null}
 
-              {activeTab === "equivalence" ? (
-                <EquivalencePanel
-                  patternA={pattern}
-                  flagsA={flags}
-                  patternB={patternB}
-                  flagsB={flagsB}
-                  onPatternBChange={setPatternB}
-                  onToggleFlagB={toggleFlagB}
-                  onCheck={runEquivalence}
-                  result={equivalence.data}
-                  loading={equivalence.loading}
-                  error={equivalence.error}
-                />
-              ) : null}
+                  {activeTab === "equivalence" ? (
+                    <EquivalencePanel
+                      patternA={pattern}
+                      flagsA={flags}
+                      patternB={patternB}
+                      flagsB={flagsB}
+                      onPatternBChange={setPatternB}
+                      onToggleFlagB={toggleFlagB}
+                      onCheck={runEquivalence}
+                      result={equivalence.data}
+                      loading={equivalence.loading}
+                      error={equivalence.error}
+                    />
+                  ) : null}
+                </div>
+              </Panel>
             </div>
-          </Panel>
-        </div>
 
-        <div className="space-y-6">
-          <Panel
-            title="Regex Explanation"
-            subtitle="Human-readable breakdown of the supported regular-language subset."
-          >
-            <ExplanationCard
-              explanation={analysis.data?.explanation}
-              automata={analysis.data?.automata}
-            />
-          </Panel>
+            <div className="space-y-6">
+              <Panel
+                title="Regex Explanation"
+                subtitle="Human-readable breakdown of the supported regular-language subset."
+              >
+                <ExplanationCard
+                  explanation={analysis.data?.explanation}
+                  automata={analysis.data?.automata}
+                />
+              </Panel>
+
+              <Panel
+                title="Engine Notes"
+                subtitle="What the backend is doing under the hood."
+              >
+                <div className="space-y-3 text-sm leading-6 text-muted">
+                  {engineNotes.map((note) => (
+                    <p key={note}>{note}</p>
+                  ))}
+                  <p>
+                    Invalid regex syntax is reported immediately. Potential ReDoS patterns and oversized
+                    inputs are blocked before they reach the expensive parts of the pipeline.
+                  </p>
+                </div>
+              </Panel>
+            </div>
+          </div>
 
           <Panel
             title="Visualization"
-            subtitle="Parse-tree structure plus NFA/DFA sizing details."
+            subtitle="Switch between parse tree, NFA, DFA, and minimized DFA for the current regex."
           >
             <VisualizationPanel
-              tree={analysis.data?.visualization}
+              visualization={analysis.data?.visualization}
               automata={analysis.data?.automata}
             />
-          </Panel>
-
-          <Panel
-            title="Engine Notes"
-            subtitle="What the backend is doing under the hood."
-          >
-            <div className="space-y-3 text-sm leading-6 text-muted">
-              {(analysis.data?.automata?.notes || []).map((note) => (
-                <p key={note}>{note}</p>
-              ))}
-              {generator.data?.notes?.map((note) => <p key={`gen-${note}`}>{note}</p>)}
-              {equivalence.data?.notes?.map((note) => (
-                <p key={`eq-${note}`}>{note}</p>
-              ))}
-              <p>
-                Invalid regex syntax is reported immediately. Potential ReDoS patterns and oversized
-                inputs are blocked before they reach the expensive parts of the pipeline.
-              </p>
-            </div>
           </Panel>
         </div>
       </div>

@@ -8,11 +8,23 @@ import {
   createHttpError,
   escapeVisible,
 } from "./services/constants.js";
-import { completeDfa, determinize, minimizeDfa, buildNfaFromAst, canonicalizeDfa, findCounterexample, generateAcceptedStrings, pickGenerationAlphabet } from "./services/automata.js";
+import {
+  completeDfa,
+  determinize,
+  minimizeDfa,
+  buildNfaFromAst,
+  canonicalizeDfa,
+  findCounterexample,
+  generateAcceptedStrings,
+  pickGenerationAlphabet,
+  serializeDfaForVisualization,
+  serializeNfaForVisualization,
+} from "./services/automata.js";
 import {
   explainAst,
   parseRegexToAst,
   serializeAstForVisualization,
+  translateCustomPatternToNative,
 } from "./services/regexParser.js";
 import { enforceRegexSafety, assessRegexSafety } from "./services/redos.js";
 
@@ -59,6 +71,7 @@ const normalizeText = (value, label) => {
 
 const automataNotesForFlags = (flags) => {
   const notes = [
+    'This app uses "+" as the OR operator. Use "{1,}" for one-or-more repetition.',
     "Generation and equivalence use full-string language semantics rather than substring search.",
   ];
 
@@ -159,9 +172,10 @@ const buildMatchObject = (match, matchIndex) => {
 
 const buildTesterResult = (pattern, flags, testString) => {
   const runtimeFlags = orderedFlags(`${flags}d`, ["g", "i", "m", "s", "d"]);
+  const nativePattern = translateCustomPatternToNative(pattern);
   let regex;
   try {
-    regex = new RegExp(pattern, runtimeFlags);
+    regex = new RegExp(nativePattern, runtimeFlags);
   } catch (error) {
     throw createHttpError("Invalid regular expression.", { message: error.message });
   }
@@ -230,7 +244,18 @@ export const analyzePattern = (payload) => {
   try {
     const bundle = buildAutomataBundle(pattern, flags);
     explanation = explainAst(bundle.ast);
-    visualization = serializeAstForVisualization(bundle.ast);
+    visualization = {
+      parseTree: serializeAstForVisualization(bundle.ast),
+      nfa: serializeNfaForVisualization(bundle.nfa),
+      dfa: serializeDfaForVisualization(bundle.dfa, {
+        kind: "dfa",
+        prefix: "d",
+      }),
+      minimizedDfa: serializeDfaForVisualization(bundle.minimized, {
+        kind: "minimized-dfa",
+        prefix: "m",
+      }),
+    };
     automata = {
       supported: true,
       notes,
@@ -342,12 +367,14 @@ export const compareRegexes = (payload) => {
       raw: counterexample,
       display: displayGeneratedValue(counterexample),
     },
-    warnings: [...safetyA.warnings, ...safetyB.warnings],
-    notes: [
-      ...automataNotesForFlags(flagsA),
-      ...automataNotesForFlags(flagsB),
-      "Equivalence is computed over the supported ASCII-oriented alphabet used by the automata engine.",
-    ],
+    warnings: Array.from(new Set([...safetyA.warnings, ...safetyB.warnings])),
+    notes: Array.from(
+      new Set([
+        ...automataNotesForFlags(flagsA),
+        ...automataNotesForFlags(flagsB),
+        "Equivalence is computed over the supported ASCII-oriented alphabet used by the automata engine.",
+      ]),
+    ),
     diagnostics: {
       alphabetSize: DEFAULT_ALPHABET.length,
       patternA: {

@@ -5,9 +5,9 @@ import {
 } from "./constants.js";
 
 const nestedQuantifierPattern =
-  /\((?:[^()\\]|\\.)*(?:\*|\+|\{\d+(?:,\d*)?\})(?:[^()\\]|\\.)*\)(?:\*|\+|\{\d+(?:,\d*)?\})/;
+  /\((?:[^()\\]|\\.)*(?:\*|\?|\{\d+(?:,\d*)?\})(?:[^()\\]|\\.)*\)(?:\*|\?|\{\d+(?:,\d*)?\})/;
 
-const ambiguousWildcardPattern = /(?:\.\*|\.\+|\[[^\]]+\]\*|\[[^\]]+\]\+)/;
+const ambiguousWildcardPattern = /(?:\.\*|\[[^\]]+\]\*)/;
 
 export const assessRegexSafety = (pattern, testString = "") => {
   const warnings = [];
@@ -26,9 +26,15 @@ export const assessRegexSafety = (pattern, testString = "") => {
   }
 
   if (nestedQuantifierPattern.test(pattern)) {
-    blockers.push(
-      "This regex looks like it contains nested quantifiers, which can trigger catastrophic backtracking.",
-    );
+    if (testString.length > 240) {
+      blockers.push(
+        "This regex looks like it contains nested quantifiers, which can trigger catastrophic backtracking on long test strings.",
+      );
+    } else {
+      warnings.push(
+        "This regex contains nested quantifiers. Keep test strings short to avoid slow backtracking in the live tester.",
+      );
+    }
   }
 
   if (ambiguousWildcardPattern.test(pattern) && testString.length > 240) {
@@ -65,4 +71,3 @@ export const enforceRegexSafety = (pattern, testString = "") => {
 
   return result;
 };
-
