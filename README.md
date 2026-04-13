@@ -65,10 +65,17 @@ Recommended beginner path: Render as a single web service.
 
 This repo includes a root-level `render.yaml` blueprint that tells Render to:
 
-- install dependencies with `npm install`
+- install workspace dependencies with `npm install --include=dev`
 - build the frontend with `npm run build`
 - start the combined Express server with `npm start`
 - use `/api/health` for health checks
+- serve both the frontend and backend from the same Render URL
+
+API behavior in production:
+
+- the frontend already defaults to relative `/api` requests in [frontend/src/utils/api.js](C:/Users/Ayaan/OneDrive/Desktop/RegEx/frontend/src/utils/api.js)
+- that means deployed requests go to the same origin as the site itself
+- local development still works because Vite proxies `/api` to `http://localhost:4000` in [frontend/vite.config.js](C:/Users/Ayaan/OneDrive/Desktop/RegEx/frontend/vite.config.js)
 
 After you click the button:
 
